@@ -1,20 +1,4 @@
 
-השיחה נפתחה. הודעה אחת שלא נקראה.
-
-דילוג לתוכן
-שימוש ב-Gmail עם קוראי מסך
-1 מתוך 1,739
-(ללא נושא)
-דואר נכנס
-מיה רום <maya5660@gmail.com‏>
-	
-קבצים מצורפים17:00 (לפני 15 דקות)
-	
-אני
-
- 4 קבצים מצורפים  •  נסרקו על ידי Gmail
-	
-
 // icmp.cpp
 // Robert Iakobashvili for Ariel uni, license BSD/MIT/Apache
 //
@@ -31,7 +15,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <signal.h>
-#include <sys/time.h> 
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -67,10 +51,9 @@ unsigned short calculate_checksum(unsigned short *paddress, int len);
 #define BUFFER_SIZE 1024
 // i.e the gateway or ping to google.com for their ip-address
 
-int pack(char* packet, int seq);
+int pack(char *packet, int seq);
 
-
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
 
     char *args[2];
@@ -83,14 +66,15 @@ int main(int argc, char* argv[])
     {
         printf("in child \n");
         execvp(args[0], args);
-        printf("child is %d\n" , getpid());
-        printf("parent is %d\n" , getppid());
+        printf("child is %d\n", getpid());
+        printf("parent is %d\n", getppid());
     }
     sleep(1);
-//*****************************TCP SOCKET**********************************************
-int sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    //*****************************TCP SOCKET**********************************************
+    int sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-    if (sockfd == -1) {
+    if (sockfd == -1)
+    {
         printf("Could not create socket : %d", errno);
         return -1;
     }
@@ -102,17 +86,19 @@ int sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     memset(&serverAddress, 0, sizeof(serverAddress));
 
     serverAddress.sin_family = AF_INET;
-    serverAddress.sin_port = htons(SERVER_PORT);                                              // (5001 = 0x89 0x13) little endian => (0x13 0x89) network endian (big endian)
-    int rval = inet_pton(AF_INET, (const char *)SERVER_IP_ADDRESS, &serverAddress.sin_addr);  // convert IPv4 and IPv6 addresses from text to binary form
+    serverAddress.sin_port = htons(SERVER_PORT);                                             // (5001 = 0x89 0x13) little endian => (0x13 0x89) network endian (big endian)
+    int rval = inet_pton(AF_INET, (const char *)SERVER_IP_ADDRESS, &serverAddress.sin_addr); // convert IPv4 and IPv6 addresses from text to binary form
     // e.g. 127.0.0.1 => 0x7f000001 => 01111111.00000000.00000000.00000001 => 2130706433
-    if (rval <= 0) {
+    if (rval <= 0)
+    {
         printf("inet_pton() failed");
         return -1;
     }
 
     // Make a connection to the server with socket SendingSocket.
     int connectResult = connect(sockfd, (struct sockaddr *)&serverAddress, sizeof(serverAddress));
-    if (connectResult == -1) {
+    if (connectResult == -1)
+    {
         printf("connect() failed with error code : %d", errno);
         // cleanup the socket;
         close(sockfd);
@@ -123,12 +109,12 @@ int sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
     //*******************************************************************************************************
 
-
     struct icmp icmphdr; // ICMP-header
 
     struct sockaddr_in dest_in;
 
-    if (argc != 2){
+    if (argc != 2)
+    {
         printf("ip adress is missing) \n");
         exit(1);
     }
@@ -151,76 +137,81 @@ int sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     }
 
     char packet[IP_MAXPACKET]; // packet to send
-    int icmp_num = 0;      // number of packets to send
+    int icmp_num = 0;          // number of packets to send
 
-    while(1){
-    int lenPacket = pack(packet, icmp_num);
-    
-    struct timeval start, end;
-    gettimeofday(&start, 0);
-    // **************************** alart watchdog *************************************
-
-    char buffer[BUFFER_SIZE] = {'\0'};
-    char message[] = "start timer\n";
-    int messageLen = strlen(message) + 1;
-    
-    int bytesSent = send(sockfd, message, messageLen, 0);
-
-    if (bytesSent == -1) {
-        printf("send() failed with error code : %d", errno);
-    } else if (bytesSent == 0) {
-        printf("peer has closed the TCP connection prior to send().\n");
-    } else if (bytesSent < messageLen) {
-        printf("sent only %d bytes from the required %d.\n", messageLen, bytesSent);
-    } else {
-        printf("message was successfully sent.\n");
-    }
-
-
-    // Send the packet using sendto() for sending datagrams.
-    int bytes_sent = sendto(sock, packet, lenPacket, 0, (struct sockaddr *)&dest_in, sizeof(dest_in));
-
-    if (bytes_sent == -1)
+    while (1)
     {
-        fprintf(stderr, "sendto() failed with error: %d", errno);
-        return -1;
-    }
-    sleep(counter);
-    counter ++;
-    // Get the ping response
-    bzero(packet, IP_MAXPACKET);
-    socklen_t len = sizeof(dest_in);
-    ssize_t bytes_received = -1;
-    struct iphdr *iphdr ;
-    struct icmphdr *icmphdr ;
-    while ((bytes_received = recvfrom(sock, packet, sizeof(packet), 0, (struct sockaddr *)&dest_in, &len)))
-    {
-        
-        if (bytes_received > 0)
+        int lenPacket = pack(packet, icmp_num);
+
+        struct timeval start, end;
+        gettimeofday(&start, 0);
+        // **************************** alart watchdog *************************************
+
+        char buffer[BUFFER_SIZE] = {'\0'};
+        char message[] = "start timer\n";
+        int messageLen = strlen(message) + 1;
+
+        int bytesSent = send(sockfd, message, messageLen, 0);
+
+        if (bytesSent == -1)
         {
-            // Check the IP header
-            iphdr = (struct iphdr *)packet;
-            icmphdr = (struct icmphdr *)(packet + (iphdr->ihl * 4));
-            inet_ntop(AF_INET, &(iphdr->saddr), packet, INET_ADDRSTRLEN);
-
-            break;
+            printf("send() failed with error code : %d", errno);
         }
-    }
+        else if (bytesSent == 0)
+        {
+            printf("peer has closed the TCP connection prior to send().\n");
+        }
+        else if (bytesSent < messageLen)
+        {
+            printf("sent only %d bytes from the required %d.\n", messageLen, bytesSent);
+        }
+        else
+        {
+            printf("message was successfully sent.\n");
+        }
 
-    gettimeofday(&end, 0);
+        // Send the packet using sendto() for sending datagrams.
+        int bytes_sent = sendto(sock, packet, lenPacket, 0, (struct sockaddr *)&dest_in, sizeof(dest_in));
 
-    char reply[IP_MAXPACKET];
-    memcpy(reply, packet + ICMP_HDRLEN + IP4_HDRLEN, lenPacket - ICMP_HDRLEN);
-    // printf("ICMP reply: %s \n", reply);
+        if (bytes_sent == -1)
+        {
+            fprintf(stderr, "sendto() failed with error: %d", errno);
+            return -1;
+        }
+        sleep(counter);
+        counter++;
+        // Get the ping response
+        bzero(packet, IP_MAXPACKET);
+        socklen_t len = sizeof(dest_in);
+        ssize_t bytes_received = -1;
+        struct iphdr *iphdr;
+        struct icmphdr *icmphdr;
+        while ((bytes_received = recvfrom(sock, packet, sizeof(packet), 0, (struct sockaddr *)&dest_in, &len)))
+        {
 
-    float milliseconds = (end.tv_sec - start.tv_sec) * 1000.0f + (end.tv_usec - start.tv_usec) / 1000.0f;
-    unsigned long microseconds = (end.tv_sec - start.tv_sec) * 1000.0f + (end.tv_usec - start.tv_usec);
-    printf("   response from %s : icmp_seq: %d RTT: %0.3f ms\n",inet_ntoa(dest_in.sin_addr), icmp_num, milliseconds );
-    icmp_num++;
-    
+            if (bytes_received > 0)
+            {
+                // Check the IP header
+                iphdr = (struct iphdr *)packet;
+                icmphdr = (struct icmphdr *)(packet + (iphdr->ihl * 4));
+                inet_ntop(AF_INET, &(iphdr->saddr), packet, INET_ADDRSTRLEN);
+
+                break;
+            }
+        }
+
+        gettimeofday(&end, 0);
+
+        char reply[IP_MAXPACKET];
+        memcpy(reply, packet + ICMP_HDRLEN + IP4_HDRLEN, lenPacket - ICMP_HDRLEN);
+        // printf("ICMP reply: %s \n", reply);
+
+        float milliseconds = (end.tv_sec - start.tv_sec) * 1000.0f + (end.tv_usec - start.tv_usec) / 1000.0f;
+        unsigned long microseconds = (end.tv_sec - start.tv_sec) * 1000.0f + (end.tv_usec - start.tv_usec);
+        printf("   response from %s : icmp_seq: %d RTT: %0.3f ms\n", inet_ntoa(dest_in.sin_addr), icmp_num, milliseconds);
+        icmp_num++;
     }
 }
-
 
 // Compute checksum (RFC 1071).
 unsigned short calculate_checksum(unsigned short *paddress, int len)
@@ -250,9 +241,10 @@ unsigned short calculate_checksum(unsigned short *paddress, int len)
     return answer;
 }
 
-int pack(char* packet, int seq){
+int pack(char *packet, int seq)
+{
 
-struct icmp icmphdr;
+    struct icmp icmphdr;
 
     //===================
     // ICMP header
@@ -291,4 +283,3 @@ struct icmp icmphdr;
 
     return ICMP_HDRLEN + datalen;
 }
-
