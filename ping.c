@@ -1,4 +1,3 @@
-
 // icmp.cpp
 // Robert Iakobashvili for Ariel uni, license BSD/MIT/Apache
 //
@@ -14,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/time.h>
+#include <sys/time.h> 
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -48,16 +47,16 @@ unsigned short calculate_checksum(unsigned short *paddress, int len);
 #define SOURCE_IP "10.0.2.15"
 // i.e the gateway or ping to google.com for their ip-address
 
-int pack(char *packet, int seq);
+int pack(char* packet, int seq);
 
-int main(int argc, char *argv[])
+
+int main(int argc, char* argv[])
 {
     struct icmp icmphdr; // ICMP-header
 
     struct sockaddr_in dest_in;
 
-    if (argc != 2)
-    {
+    if (argc != 2){
         printf("ip address is missing) \n");
         exit(1);
     }
@@ -80,56 +79,56 @@ int main(int argc, char *argv[])
     }
 
     char packet[IP_MAXPACKET]; // packet to send
-    int icmp_num = 0;          // number of packets to send
+    int icmp_num = 0;      // number of packets to send
 
-    while (1)
+    while(1){
+    int lenPacket = pack(packet, icmp_num);
+    
+    struct timeval start, end;
+    gettimeofday(&start, 0);
+
+    // Send the packet using sendto() for sending datagrams.
+    int bytes_sent = sendto(sock, packet, lenPacket, 0, (struct sockaddr *)&dest_in, sizeof(dest_in));
+    if (bytes_sent == -1)
     {
-        int lenPacket = pack(packet, icmp_num);
+        fprintf(stderr, "sendto() failed with error: %d", errno);
+        return -1;
+    }
 
-        struct timeval start, end;
-        gettimeofday(&start, 0);
-
-        // Send the packet using sendto() for sending datagrams.
-        int bytes_sent = sendto(sock, packet, lenPacket, 0, (struct sockaddr *)&dest_in, sizeof(dest_in));
-        if (bytes_sent == -1)
+    // Get the ping response
+    bzero(packet, IP_MAXPACKET);
+    socklen_t len = sizeof(dest_in);
+    ssize_t bytes_received = -1;
+    struct iphdr *iphdr ;
+    struct icmphdr *icmphdr ;
+    while ((bytes_received = recvfrom(sock, packet, sizeof(packet), 0, (struct sockaddr *)&dest_in, &len)))
+    {
+        
+        if (bytes_received > 0)
         {
-            fprintf(stderr, "sendto() failed with error: %d", errno);
-            return -1;
+            // Check the IP header
+            iphdr = (struct iphdr *)packet;
+            icmphdr = (struct icmphdr *)(packet + (iphdr->ihl * 4));
+            inet_ntop(AF_INET, &(iphdr->saddr), packet, INET_ADDRSTRLEN);
+
+            break;
         }
+    }
 
-        // Get the ping response
-        bzero(packet, IP_MAXPACKET);
-        socklen_t len = sizeof(dest_in);
-        ssize_t bytes_received = -1;
-        struct iphdr *iphdr;
-        struct icmphdr *icmphdr;
-        while ((bytes_received = recvfrom(sock, packet, sizeof(packet), 0, (struct sockaddr *)&dest_in, &len)))
-        {
+    gettimeofday(&end, 0);
 
-            if (bytes_received > 0)
-            {
-                // Check the IP header
-                iphdr = (struct iphdr *)packet;
-                icmphdr = (struct icmphdr *)(packet + (iphdr->ihl * 4));
-                inet_ntop(AF_INET, &(iphdr->saddr), packet, INET_ADDRSTRLEN);
+    char reply[IP_MAXPACKET];
+    memcpy(reply, packet + ICMP_HDRLEN + IP4_HDRLEN, lenPacket - ICMP_HDRLEN);
+    // printf("ICMP reply: %s \n", reply);
 
-                break;
-            }
-        }
-
-        gettimeofday(&end, 0);
-
-        char reply[IP_MAXPACKET];
-        memcpy(reply, packet + ICMP_HDRLEN + IP4_HDRLEN, lenPacket - ICMP_HDRLEN);
-        // printf("ICMP reply: %s \n", reply);
-
-        float milliseconds = (end.tv_sec - start.tv_sec) * 1000.0f + (end.tv_usec - start.tv_usec) / 1000.0f;
-        unsigned long microseconds = (end.tv_sec - start.tv_sec) * 1000.0f + (end.tv_usec - start.tv_usec);
-        printf("   response from %s : icmp_seq: %d RTT: %0.3f ms\n", inet_ntoa(dest_in.sin_addr), icmp_num, milliseconds);
-        icmp_num++;
-        sleep(1);
+    float milliseconds = (end.tv_sec - start.tv_sec) * 1000.0f + (end.tv_usec - start.tv_usec) / 1000.0f;
+    unsigned long microseconds = (end.tv_sec - start.tv_sec) * 1000.0f + (end.tv_usec - start.tv_usec);
+    printf("response from %s : icmp_seq: %d RTT: %0.3f ms\n",inet_ntoa(dest_in.sin_addr), icmp_num, milliseconds );
+    icmp_num++;
+    sleep(1);
     }
 }
+
 
 // Compute checksum (RFC 1071).
 unsigned short calculate_checksum(unsigned short *paddress, int len)
@@ -159,10 +158,9 @@ unsigned short calculate_checksum(unsigned short *paddress, int len)
     return answer;
 }
 
-int pack(char *packet, int seq)
-{
+int pack(char* packet, int seq){
 
-    struct icmp icmphdr;
+struct icmp icmphdr;
 
     //===================
     // ICMP header
