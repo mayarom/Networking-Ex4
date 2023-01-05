@@ -1,4 +1,3 @@
-
 // icmp.cpp
 // Robert Iakobashvili for Ariel uni, license BSD/MIT/Apache
 //
@@ -24,29 +23,10 @@
 
 // ICMP header len for echo req
 #define ICMP_HDRLEN 8
-int counter = 1;
 // Checksum algo
 unsigned short calculate_checksum(unsigned short *paddress, int len);
 
-// 1. Change SOURCE_IP and DESTINATION_IP to the relevant
-//     for your computer
-// 2. Compile it using MSVC compiler or g++
-// 3. Run it from the account with administrative permissions,
-//    since opening of a raw-socket requires elevated preveledges.
-//
-//    On Windows, right click the exe and select "Run as administrator"
-//    On Linux, run it as a root or with sudo.
-//
-// 4. For debugging and development, run MS Visual Studio (MSVS) as admin by
-//    right-clicking at the icon of MSVS and selecting from the right-click
-//    menu "Run as administrator"
-//
-//  Note. You can place another IP-source address that does not belong to your
-//  computer (IP-spoofing), i.e. just another IP from your subnet, and the ICMP
-//  still be sent, but do not expect to see ICMP_ECHO_REPLY in most such cases
-//  since anti-spoofing is wide-spread.
-
-#define SERVER_PORT 5060
+#define SERVER_PORT 3000
 #define SERVER_IP_ADDRESS "127.0.0.1"
 #define BUFFER_SIZE 1024
 // i.e the gateway or ping to google.com for their ip-address
@@ -63,11 +43,8 @@ int main(int argc, char *argv[])
     int status;
     int pid = fork();
     if (pid == 0)
-    {
-        printf("in child \n");
+    {   
         execvp(args[0], args);
-        printf("child is %d\n", getpid());
-        printf("parent is %d\n", getppid());
     }
     sleep(1);
     //*****************************TCP SOCKET**********************************************
@@ -105,7 +82,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    printf("connected to server\n");
+    printf("connected to watchdog\n");
 
     //*******************************************************************************************************
 
@@ -115,17 +92,14 @@ int main(int argc, char *argv[])
 
     if (argc != 2)
     {
-        printf("ip adress is missing) \n");
+        printf("ip address is missing) \n");
         exit(1);
     }
 
     memset(&dest_in, 0, sizeof(struct sockaddr_in));
     dest_in.sin_family = AF_INET;
 
-    // The port is irrelant for Networking and therefore was zeroed.
-    // dest_in.sin_addr.s_addr = iphdr.ip_dst.s_addr;
     dest_in.sin_addr.s_addr = inet_addr(argv[1]);
-    // inet_pton(AF_INET, argv[1], &(dest_in.sin_addr.s_addr));
 
     // ********************************Create raw socket for IP-RAW (make IP-header by yourself)******************
     int sock = -1;
@@ -153,21 +127,9 @@ int main(int argc, char *argv[])
 
         int bytesSent = send(sockfd, message, messageLen, 0);
 
-        if (bytesSent == -1)
+        if (bytesSent <= 0)
         {
             printf("send() failed with error code : %d", errno);
-        }
-        else if (bytesSent == 0)
-        {
-            printf("peer has closed the TCP connection prior to send().\n");
-        }
-        else if (bytesSent < messageLen)
-        {
-            printf("sent only %d bytes from the required %d.\n", messageLen, bytesSent);
-        }
-        else
-        {
-            printf("message was successfully sent.\n");
         }
 
         // Send the packet using sendto() for sending datagrams.
@@ -175,11 +137,13 @@ int main(int argc, char *argv[])
 
         if (bytes_sent == -1)
         {
+            sleep(11);
             fprintf(stderr, "sendto() failed with error: %d", errno);
             return -1;
         }
-        sleep(counter);
-        counter++;
+        sleep(1);
+        
+
         // Get the ping response
         bzero(packet, IP_MAXPACKET);
         socklen_t len = sizeof(dest_in);
@@ -204,12 +168,18 @@ int main(int argc, char *argv[])
 
         char reply[IP_MAXPACKET];
         memcpy(reply, packet + ICMP_HDRLEN + IP4_HDRLEN, lenPacket - ICMP_HDRLEN);
-        // printf("ICMP reply: %s \n", reply);
 
         float milliseconds = (end.tv_sec - start.tv_sec) * 1000.0f + (end.tv_usec - start.tv_usec) / 1000.0f;
         unsigned long microseconds = (end.tv_sec - start.tv_sec) * 1000.0f + (end.tv_usec - start.tv_usec);
-        printf("   response from %s : icmp_seq: %d RTT: %0.3f ms\n", inet_ntoa(dest_in.sin_addr), icmp_num, milliseconds);
+        printf("response from %s : icmp_seq: %d RTT: %0.3f ms\n", inet_ntoa(dest_in.sin_addr), icmp_num, milliseconds);
         icmp_num++;
+
+        // Receive data from server
+        char bufferReply[BUFFER_SIZE] = {'\0'};
+        int bytesReceived = recv(sockfd, bufferReply, BUFFER_SIZE, 0);
+        if (bytesReceived <= 0) {
+            printf("recv() failed with error code : %d", errno);
+        }
     }
 }
 
