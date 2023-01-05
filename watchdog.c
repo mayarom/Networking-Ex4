@@ -12,14 +12,13 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define SERVER_PORT 5060 // The port that the server listens
+#define SERVER_PORT 3000 
 #define BUFFER_SIZE 1024
 
 void killer();
 
 int main()
 {
-    // signal(SIGPIPE, SIG_IGN);  // on linux to prevent crash on closing socket
 
     // Open the listening (server) socket
     int listeningSocket = -1;
@@ -30,9 +29,6 @@ int main()
         return 1;
     }
 
-    // Reuse the address if the server socket on was closed
-    // and remains for 45 seconds in TIME-WAIT state till the final removal.
-    //
     int enableReuse = 1;
     int ret = setsockopt(listeningSocket, SOL_SOCKET, SO_REUSEADDR, &enableReuse, sizeof(int));
     if (ret < 0)
@@ -61,11 +57,7 @@ int main()
         return -1;
     }
 
-    printf("Bind() success\n");
-
     // Make the socket listening; actually mother of all client sockets.
-    // 500 is a Maximum size of queue connection requests
-    // number of concurrent connections
     int listenResult = listen(listeningSocket, 3);
     if (listenResult == -1)
     {
@@ -74,9 +66,6 @@ int main()
         close(listeningSocket);
         return -1;
     }
-
-    // Accept and incoming connection
-    printf("Waiting for incoming TCP-connections...\n");
 
     struct sockaddr_in clientAddress;
     socklen_t clientAddressLen = sizeof(clientAddress);
@@ -93,8 +82,6 @@ int main()
             close(listeningSocket);
             return -1;
         }
-
-        printf("A new client connection accepted\n");
 
         signal(SIGALRM, killer);
         while (1)
@@ -114,31 +101,17 @@ int main()
                 return -1;
             }
 
-            printf("Received: %s", buffer);
-
             // Reply to client
-            char *message = "Welcome to our TCP-server\n";
+            char *message = "gotcha\n";
             int messageLen = strlen(message) + 1;
 
             int bytesSent = send(clientSocket, message, messageLen, 0);
-            if (bytesSent == -1)
+            if (bytesSent <= 0)
             {
                 printf("send() failed with error code : %d", errno);
                 close(listeningSocket);
                 close(clientSocket);
                 return -1;
-            }
-            else if (bytesSent == 0)
-            {
-                printf("peer has closed the TCP connection prior to send().\n");
-            }
-            else if (bytesSent < messageLen)
-            {
-                printf("sent only %d bytes from the required %d.\n", messageLen, bytesSent);
-            }
-            else
-            {
-                printf("message was successfully sent.\n");
             }
         }
     }
